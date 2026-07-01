@@ -72,15 +72,25 @@ Everything lives in one file, so most tweaks are a single CSS variable or consta
 * **Spine artwork requires CORS-enabled image reads** from your Plex server. If your server/proxy doesn't allow cross-origin pixel reads, spines fall back to a plain color placeholder with a text label instead of the generated artwork — playback and browsing still work fine either way.
 * Data (auth token, server address, library selection) is stored in the browser's `localStorage`, so it's per-browser, not synced across devices.
 
-Note: Created alongside Claude - be aware parts of this project are vibe coded!
+## Note: Created alongside Claude - be aware parts of this project are vibe coded!
 
+
+
+# Main cover view:
 ![alt text](https://github.com/tommfy/crate-plex-album-flow/blob/main/Readme%20Resources/main_cover_view.png "Main cover view")
 
+
+# Main cover view when something is playing:
 ![alt text](https://github.com/tommfy/crate-plex-album-flow/blob/main/Readme%20Resources/main_view_playing.png "Main cover view when something is playing")
 
+
+# Now playing queue - what's up next:
 ![alt text](https://github.com/tommfy/crate-plex-album-flow/blob/main/Readme%20Resources/now_playing_queue.png "Now playing queue - what's up next")
 
+
+# Clicking on an album with bring up its tracks:
 ![alt text](https://github.com/tommfy/crate-plex-album-flow/blob/main/Readme%20Resources/album_tracklisting.png "Clicking on an album with bring up its tracks")
 
-![alt text](https://github.com/tommfy/crate-plex-album-flow/blob/main/Readme%20Resources/artist_shelf.png "Clicking on an artist name in the album view will show all albums by that artist in their own shelf")
 
+# Clicking on an artist name in the album view will show all albums by that artist in their own shelf:
+![alt text](https://github.com/tommfy/crate-plex-album-flow/blob/main/Readme%20Resources/artist_shelf.png "Clicking on an artist name in the album view will show all albums by that artist in their own shelf")

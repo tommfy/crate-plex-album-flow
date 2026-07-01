@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Crate</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Crate">
+<meta name="theme-color" content="#15110e">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#15110e;
+    --bg-elevated:#1f1912;
+    --wood:#3c2a1d;
+    --accent:#d98e3b;
+    --rust:#a8462f;
+    --cream:#f3ead9;
+    --muted:#8a7a68;
+    --spine-w: 34px;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html{ zoom:1.2; }
+  html,body{
+    margin:0; height:100%; background:var(--bg); color:var(--cream);
+    font-family:'Inter',sans-serif; overflow:hidden;
+    -webkit-user-select:none; user-select:none;
+  }
+  #app{ height:100%; display:flex; flex-direction:column; }
+
+  /* ---------- Header ---------- */
+  header{
+    padding: env(safe-area-inset-top,16px) 20px 14px;
+    display:flex; align-items:baseline; justify-content:space-between;
+    background:linear-gradient(180deg, var(--bg) 60%, transparent);
+    position:relative; z-index:5;
+  }
+  header h1{
+    font-family:'Fraunces',serif; font-weight:600; font-size:22px; margin:0;
+    letter-spacing:0.02em;
+  }
+  header h1 span{ color:var(--accent); font-style:italic; font-weight:400; }
+  #libBtn{
+    background:none; border:1px solid var(--muted); color:var(--muted);
+    font-family:'JetBrains Mono',monospace; font-size:11px; padding:5px 9px;
+    border-radius:20px; letter-spacing:0.03em;
+  }
+
+  /* ---------- Auth screen ---------- */
+  #auth{
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:32px; text-align:center; gap:18px;
+  }
+  #auth .mark{ font-family:'Fraunces',serif; font-size:40px; font-weight:700; }
+  #auth .mark em{ color:var(--accent); font-style:italic; }
+  #auth p{ color:var(--muted); max-width:280px; line-height:1.5; font-size:14px; margin:0; }
+  .btn{
+    background:var(--accent); color:#1a1209; border:none; font-weight:600;
+    padding:14px 26px; border-radius:10px; font-size:15px; font-family:'Inter',sans-serif;
+    cursor:pointer;
+  }
+  .btn:disabled{ opacity:0.5; }
+  .btn-ghost{
+    background:none; border:1px solid var(--muted); color:var(--cream);
+    padding:13px 26px; border-radius:10px; font-size:14px;
+  }
+  #pinCode{
+    font-family:'JetBrains Mono',monospace; font-size:30px; letter-spacing:0.15em;
+    background:var(--bg-elevated); padding:10px 18px; border-radius:10px; color:var(--accent);
+  }
+  #authStatus{ font-size:13px; color:var(--muted); min-height:18px; }
+
+  /* ---------- Library picker ---------- */
+  #libPicker{
+    position:fixed; inset:0; background:rgba(10,8,6,0.92); z-index:50;
+    display:none; flex-direction:column; padding:24px; padding-top:calc(env(safe-area-inset-top,0) + 24px);
+  }
+  #libPicker.show{ display:flex; }
+  #libPicker h2{ font-family:'Fraunces',serif; font-weight:600; margin:0 0 4px; }
+  #libPicker .sub{ color:var(--muted); font-size:13px; margin-bottom:20px; }
+  .libRow{
+    background:var(--bg-elevated); border-radius:10px; padding:14px 16px; margin-bottom:10px;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .libRow .name{ font-weight:600; font-size:15px; }
+  .libRow .server{ color:var(--muted); font-size:12px; }
+  .libRow button{ background:var(--accent); border:none; color:#1a1209; font-weight:600;
+    padding:8px 14px; border-radius:8px; font-size:13px; }
+  #libPicker .close{ margin-top:auto; align-self:center; color:var(--muted); background:none; border:none;
+    font-size:13px; padding:12px; }
+
+  /* ---------- Crate (spine shelf) ---------- */
+  #crate{
+    flex:1; display:none; overflow-x:auto; overflow-y:hidden;
+    -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity;
+    padding: 18px 16px calc(18px + var(--mini-h, 0px) + env(safe-area-inset-bottom,0px));
+    display:none; align-items:center; gap:2px;
+    background:
+      radial-gradient(ellipse at top, rgba(217,142,59,0.06), transparent 60%),
+      linear-gradient(180deg, var(--bg) 0%, #0f0c09 100%);
+  }
+  #crate.show{ display:flex; }
+  .spine{
+    flex:0 0 auto; width:var(--spine-w); height:78vw; max-height:420px;
+    position:relative; border-radius:3px 6px 6px 3px; overflow:hidden;
+    background:linear-gradient(165deg, var(--wood), #241a12);
+    background-size:100% 100%; background-repeat:no-repeat;
+    transition: width .28s ease, transform .28s ease, opacity .4s ease;
+    box-shadow: -1px 0 0 rgba(0,0,0,0.5), inset 2px 0 4px rgba(0,0,0,0.5), inset -1px 0 0 rgba(255,255,255,0.06);
+    scroll-snap-align:start;
+  }
+  .spine::after{
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.22) 100%);
+  }
+  .spine .label{
+    position:absolute; left:50%; top:14px; transform:translateX(-50%) rotate(90deg);
+    transform-origin: top left; white-space:nowrap; font-family:'Fraunces',serif;
+    font-size:11px; font-weight:600; letter-spacing:0.02em; color:rgba(255,255,255,0.82);
+    max-width:410px; overflow:hidden; text-overflow:ellipsis;
+    text-shadow:0 1px 2px rgba(0,0,0,0.6);
+  }
+  .spine.art .label{ display:none; }
+  .spine.playing{ box-shadow:0 0 0 2px var(--accent), inset 2px 0 4px rgba(0,0,0,0.5); }
+  #crateEmpty{ margin:auto; color:var(--muted); text-align:center; padding:40px; font-size:14px; }
+
+  /* ---------- Album overlay ---------- */
+  #overlay{
+    position:fixed; inset:0; background:var(--bg); z-index:40;
+    display:none; flex-direction:column;
+    transform:translateY(100%); transition:transform .32s cubic-bezier(.2,.8,.2,1);
+  }
+  #overlay.show{ display:flex; transform:translateY(0); }
+  #overlay .top{ display:flex; justify-content:flex-end; padding:14px 16px calc(env(safe-area-inset-top,0)); }
+  #overlay .top button{ background:rgba(255,255,255,0.08); border:none; color:var(--cream);
+    width:34px; height:34px; border-radius:50%; font-size:16px;
+    display:flex; align-items:center; justify-content:center; }
+  #overlay .cover-wrap{ padding:6px 28px 14px; text-align:center; }
+  #overlay .cover-wrap img{ width:min(34vw, 22vh, 140px); aspect-ratio:1/1; object-fit:cover;
+    border-radius:6px; box-shadow:0 14px 28px rgba(0,0,0,0.5); cursor:pointer; }
+  #overlay .meta{ text-align:center; padding:0 24px 14px; }
+  #overlay .meta .title{ font-family:'Fraunces',serif; font-weight:600; font-size:21px; margin:0 0 4px; }
+  #overlay .meta .artist{ color:var(--accent); font-size:14px; margin:0; cursor:pointer; text-decoration:underline; text-decoration-color:transparent; }
+  #overlay .meta .artist:active{ text-decoration-color:var(--accent); }
+  #overlay .meta .year{ color:var(--muted); font-size:12px; margin-top:2px; }
+
+  /* ---------- Full-size art viewer ---------- */
+  #artViewer{
+    position:fixed; inset:0; background:rgba(8,6,4,0.94); z-index:60;
+    display:none; align-items:center; justify-content:center; padding:28px;
+  }
+  #artViewer.show{ display:flex; }
+  #artViewer img{ width:min(90vw,90vh); max-width:600px; aspect-ratio:1/1; object-fit:cover;
+    border-radius:8px; box-shadow:0 24px 60px rgba(0,0,0,0.6); }
+  #tracklist{ flex:1; overflow-y:auto; padding:4px 8px calc(env(safe-area-inset-bottom,0) + 120px); }
+  .track{ display:flex; align-items:center; gap:12px; padding:9px 16px; border-radius:8px; }
+  .track.active{ background:rgba(217,142,59,0.12); }
+  .track .idx{ font-family:'JetBrains Mono',monospace; color:var(--muted); font-size:12px; width:18px; }
+  .track .idx .eq{ color:var(--accent); }
+  .track .t{ flex:1; font-size:11.5px; }
+  .track .dur{ font-family:'JetBrains Mono',monospace; color:var(--muted); font-size:11.5px; }
+
+  /* ---------- Mini player ---------- */
+  #miniPlayer{
+    position:fixed; left:10px; right:10px; bottom:calc(env(safe-area-inset-bottom,0) + 10px);
+    background:var(--bg-elevated); border-radius:14px; padding:9px 12px;
+    display:none; align-items:center; gap:8px; z-index:45;
+    box-shadow:0 10px 30px rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.06);
+  }
+  #miniPlayer.show{ display:flex; }
+  #mpTapArea{ display:flex; align-items:center; gap:11px; flex:1; min-width:0; cursor:pointer; }
+  #miniPlayer img{ width:42px; height:42px; border-radius:5px; object-fit:cover; }
+  #miniPlayer .info{ flex:1; min-width:0; }
+  #miniPlayer .info .t{ font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #miniPlayer .info .a{ font-size:11.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #miniPlayer button{ background:none; border:none; color:var(--cream); font-size:19px; padding:4px 5px; flex:0 0 auto;
+    display:flex; align-items:center; justify-content:center; }
+  #queueBtn{ font-size:15px !important; color:var(--muted) !important; }
+  #mpCodec{
+    font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted);
+    border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:3px 6px;
+    white-space:nowrap; flex:0 0 auto; display:none;
+  }
+  #miniPlayer .bar{ position:absolute; left:12px; right:12px; bottom:2px; height:2px; background:rgba(255,255,255,0.12); border-radius:2px; overflow:hidden; }
+  #miniPlayer .bar i{ display:block; height:100%; width:0%; background:var(--accent); }
+
+  /* ---------- Queue panel ---------- */
+  #queuePanel{
+    position:fixed; left:0; right:0; bottom:0; z-index:46;
+    background:var(--bg-elevated); border-radius:16px 16px 0 0;
+    max-height:65vh; display:flex; flex-direction:column;
+    transform:translateY(100%); transition:transform .3s cubic-bezier(.2,.8,.2,1);
+    box-shadow:0 -10px 30px rgba(0,0,0,0.5); border-top:1px solid rgba(255,255,255,0.08);
+  }
+  #queuePanel.show{ transform:translateY(0); }
+  #queuePanel .qHead{ display:flex; justify-content:space-between; align-items:center; padding:16px 18px 6px; }
+  #queuePanel .qHead h3{ font-family:'Fraunces',serif; margin:0; font-size:16px; font-weight:600; }
+  #queuePanel .qHead button{ background:none; border:none; color:var(--muted); font-size:13px; }
+  #queueList{ overflow-y:auto; padding:4px 8px; }
+  .qRow{ display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:8px; }
+  .qRow.active{ background:rgba(217,142,59,0.14); }
+  .qRow .qi{ width:16px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); text-align:center; }
+  .qRow.active .qi{ color:var(--accent); }
+  .qRow .qt{ flex:1; min-width:0; }
+  .qRow .qt .tt{ font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .qRow .qt .aa{ font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #queueNext{ padding:10px 18px calc(env(safe-area-inset-bottom,10px) + 12px); color:var(--muted);
+    font-size:12px; border-top:1px solid rgba(255,255,255,0.07); }
+
+  .spinner{ width:16px; height:16px; border:2px solid rgba(255,255,255,0.2); border-top-color:var(--accent);
+    border-radius:50%; animation:spin .7s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <h1>crate<span>.</span></h1>
+    <button id="libBtn" style="display:none">change shelf</button>
+  </header>
+
+  <div id="auth">
+    <div class="mark">crate<em>.</em></div>
+    <p>Your Plex music library, one shelf you can actually flip through.</p>
+    <button class="btn" id="signInBtn">Sign in with Plex</button>
+    <div id="pinBlock" style="display:none; flex-direction:column; align-items:center; gap:10px;">
+      <div id="pinCode">----</div>
+      <p>Open <b>plex.tv/link</b> on any device and enter this code.</p>
+      <div id="authStatus"></div>
+    </div>
+  </div>
+
+  <div id="crate"></div>
+  <div id="crateEmpty" style="display:none">Nothing on this shelf yet.</div>
+
+  <div id="libPicker">
+    <h2>Pick a shelf</h2>
+    <div class="sub">Which music library should live here?</div>
+    <div id="libList"></div>
+    <button class="close" id="libClose">Cancel</button>
+  </div>
+
+  <div id="overlay">
+    <div class="top"><button id="closeOverlay"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M18.3 5.71L12 12.01l-6.3-6.3-1.4 1.4 6.3 6.3-6.3 6.3 1.4 1.4 6.3-6.3 6.3 6.3 1.4-1.4-6.3-6.3 6.3-6.3z"/></svg></button></div>
+    <div class="cover-wrap"><img id="ovCover" src="" alt=""></div>
+    <div class="meta">
+      <p class="title" id="ovTitle"></p>
+      <p class="artist" id="ovArtist"></p>
+      <p class="year" id="ovYear"></p>
+    </div>
+    <div id="tracklist"></div>
+  </div>
+
+  <div id="artViewer"><img id="artViewerImg" src="" alt=""></div>
+
+  <div id="miniPlayer">
+    <div id="mpTapArea">
+      <img id="mpCover" src="" alt="">
+      <div class="info">
+        <div class="t" id="mpTitle"></div>
+        <div class="a" id="mpArtist"></div>
+      </div>
+    </div>
+    <span id="mpCodec"></span>
+    <button id="mpPrev"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
+    <button id="mpToggle"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>
+    <button id="mpNext"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
+    <button id="queueBtn" title="Up next"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h10v2H4z"/></svg></button>
+    <div class="bar"><i id="mpProgress"></i></div>
+  </div>
+
+  <div id="queuePanel">
+    <div class="qHead"><h3>Up next</h3><button id="queueClose">Close</button></div>
+    <div id="queueList"></div>
+    <div id="queueNext"></div>
+  </div>
+
+  <audio id="audio" preload="none"></audio>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------------- Plex client identity ----------------
+  const LS = {
+    get(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } },
+    set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  };
+  let clientId = LS.get('crate_clientId');
+  if(!clientId){
+    clientId = 'crate-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    LS.set('crate_clientId', clientId);
+  }
+  const PLEX_HEADERS_QS = {
+    'X-Plex-Product': 'Crate',
+    'X-Plex-Version': '1.0',
+    'X-Plex-Client-Identifier': clientId,
+    'X-Plex-Platform': 'Web',
+    'X-Plex-Device-Name': 'Crate Web'
+  };
+  function qs(obj){
+    return Object.entries(obj).map(([k,v]) => encodeURIComponent(k)+'='+encodeURIComponent(v)).join('&');
+  }
+
+  let token = LS.get('crate_token') || null;
+  let serverBaseUrl = LS.get('crate_serverUrl') || null;
+  let serverMachineId = LS.get('crate_serverMachineId') || null;
+  let sectionKey = LS.get('crate_sectionKey') || null;
+
+  // ---------------- DOM refs ----------------
+  const $ = (id) => document.getElementById(id);
+  const authEl = $('auth'), signInBtn = $('signInBtn'), pinBlock = $('pinBlock'),
+        pinCodeEl = $('pinCode'), authStatus = $('authStatus'),
+        crateEl = $('crate'), crateEmpty = $('crateEmpty'), libBtn = $('libBtn'),
+        libPicker = $('libPicker'), libList = $('libList'), libClose = $('libClose'),
+        overlay = $('overlay'), closeOverlay = $('closeOverlay'),
+        ovCover = $('ovCover'), ovTitle = $('ovTitle'), ovArtist = $('ovArtist'), ovYear = $('ovYear'),
+        tracklistEl = $('tracklist'),
+        artViewer = $('artViewer'), artViewerImg = $('artViewerImg'),
+        mini = $('miniPlayer'), mpTapArea = $('mpTapArea'), mpCover = $('mpCover'), mpTitle = $('mpTitle'), mpArtist = $('mpArtist'),
+        mpToggle = $('mpToggle'), mpPrev = $('mpPrev'), mpNext = $('mpNext'), mpProgress = $('mpProgress'), mpCodec = $('mpCodec'),
+        queueBtn = $('queueBtn'), queuePanel = $('queuePanel'), queueClose = $('queueClose'),
+        queueListEl = $('queueList'), queueNextEl = $('queueNext'),
+        audio = $('audio');
+
+  // ---------------- Plex API ----------------
+  const Plex = {
+    async createPin(){
+      const res = await fetch('https://plex.tv/api/v2/pins?' + qs({strong:'true', ...PLEX_HEADERS_QS}), {
+        method:'POST', headers:{'Accept':'application/json'}
+      });
+      return res.json();
+    },
+    async checkPin(id){
+      const res = await fetch(`https://plex.tv/api/v2/pins/${id}?` + qs(PLEX_HEADERS_QS), {
+        headers:{'Accept':'application/json'}
+      });
+      return res.json();
+    },
+    async getResources(tok){
+      const res = await fetch('https://plex.tv/api/v2/resources?' + qs({includeHttps:'1', includeRelay:'1', 'X-Plex-Token':tok, ...PLEX_HEADERS_QS}), {
+        headers:{'Accept':'application/json'}
+      });
+      return res.json();
+    },
+    async getSections(base, tok){
+      const res = await fetch(`${base}/library/sections?X-Plex-Token=${tok}`, { headers:{'Accept':'application/json'} });
+      const j = await res.json();
+      return (j.MediaContainer.Directory || []).filter(d => d.type === 'artist');
+    },
+    async getAlbums(base, tok, key){
+      const res = await fetch(`${base}/library/sections/${key}/albums?X-Plex-Token=${tok}&sort=titleSort`, { headers:{'Accept':'application/json'} });
+      const j = await res.json();
+      return j.MediaContainer.Metadata || [];
+    },
+    async getTracks(base, tok, ratingKey){
+      const res = await fetch(`${base}/library/metadata/${ratingKey}/children?X-Plex-Token=${tok}`, { headers:{'Accept':'application/json'} });
+      const j = await res.json();
+      return j.MediaContainer.Metadata || [];
+    },
+    async getArtistAlbums(base, tok, artistRatingKey){
+      const res = await fetch(`${base}/library/metadata/${artistRatingKey}/children?X-Plex-Token=${tok}`, { headers:{'Accept':'application/json'} });
+      const j = await res.json();
+      return j.MediaContainer.Metadata || [];
+    },
+    img(base, tok, path, w){
+      if(!path) return '';
+      return `${base}/photo/:/transcode?width=${w||300}&height=${w||300}&minSize=1&url=${encodeURIComponent(path + '?X-Plex-Token=' + tok)}&X-Plex-Token=${tok}`;
+    },
+    stream(base, tok, partKey){
+      return `${base}${partKey}?X-Plex-Token=${tok}`;
+    }
+  };
+
+  // ---------------- Auth flow ----------------
+  signInBtn.addEventListener('click', startAuth);
+
+  async function startAuth(){
+    signInBtn.disabled = true;
+    // Open the popup synchronously, in direct response to the tap — Safari
+    // (especially iOS) blocks window.open() if it happens after an await,
+    // since it no longer counts as a direct result of user interaction.
+    const authWindow = window.open('', '_blank');
+
+    const pin = await Plex.createPin();
+    pinCodeEl.textContent = pin.code;
+    pinBlock.style.display = 'flex';
+    authStatus.textContent = 'Waiting for you to authorize…';
+
+    const authUrl = 'https://app.plex.tv/auth#?' + qs({
+      clientID: clientId, code: pin.code,
+      'context[device][product]': 'Crate'
+    });
+    if(authWindow){
+      authWindow.location = authUrl;
+    }else{
+      // Popup was blocked anyway (e.g. blocker set to "always block") — give
+      // the person a manual link instead of failing silently.
+      authStatus.innerHTML = `Pop-up blocked — <a href="${authUrl}" target="_blank" style="color:var(--accent)">tap here to sign in</a>, then come back.`;
+    }
+
+    const poll = setInterval(async () => {
+      try{
+        const check = await Plex.checkPin(pin.id);
+        if(check.authToken){
+          clearInterval(poll);
+          token = check.authToken;
+          LS.set('crate_token', token);
+          authStatus.textContent = 'Linking your library…';
+          await afterAuth();
+        }
+      }catch(e){ /* keep polling */ }
+    }, 2000);
+  }
+
+  async function afterAuth(){
+    const resources = await Plex.getResources(token);
+    const servers = resources.filter(r => r.provides && r.provides.includes('server'));
+    const shelves = [];
+    for(const server of servers){
+      const conns = (server.connections||[]).sort((a,b) => (a.local === b.local) ? 0 : (a.local ? -1 : 1));
+      for(const conn of conns){
+        try{
+          const base = conn.uri;
+          const sections = await Plex.getSections(base, token);
+          sections.forEach(sec => shelves.push({ serverName: server.name, machineId: server.clientIdentifier, base, sectionKey: sec.key, sectionTitle: sec.title }));
+          if(sections.length) break; // one working connection per server is enough
+        }catch(e){ /* try next connection */ }
+      }
+    }
+    if(!shelves.length){
+      authStatus.textContent = "Couldn't find a music library on your Plex account.";
+      return;
+    }
+    if(shelves.length === 1){
+      chooseShelf(shelves[0]);
+    }else{
+      showLibPicker(shelves);
+    }
+  }
+
+  function showLibPicker(shelves){
+    libList.innerHTML = '';
+    shelves.forEach(s => {
+      const row = document.createElement('div');
+      row.className = 'libRow';
+      row.innerHTML = `<div><div class="name">${s.sectionTitle}</div><div class="server">${s.serverName}</div></div><button>Use this</button>`;
+      row.querySelector('button').addEventListener('click', () => { chooseShelf(s); libPicker.classList.remove('show'); });
+      libList.appendChild(row);
+    });
+    libPicker.classList.add('show');
+  }
+  libClose.addEventListener('click', () => libPicker.classList.remove('show'));
+  libBtn.addEventListener('click', async () => {
+    if(shelfMode === 'artist'){
+      const prev = shelfHistory.pop();
+      shelfAlbums = prev ? prev.albums : mainAlbums;
+      shelfMode = prev ? prev.mode : 'main';
+      updateShelfButton();
+      renderSpines();
+      return;
+    }
+    const resources = await Plex.getResources(token);
+    const servers = resources.filter(r => r.provides && r.provides.includes('server'));
+    const shelves = [];
+    for(const server of servers){
+      for(const conn of (server.connections||[])){
+        try{
+          const sections = await Plex.getSections(conn.uri, token);
+          sections.forEach(sec => shelves.push({ serverName: server.name, machineId: server.clientIdentifier, base: conn.uri, sectionKey: sec.key, sectionTitle: sec.title }));
+          if(sections.length) break;
+        }catch(e){}
+      }
+    }
+    showLibPicker(shelves);
+  });
+
+  function chooseShelf(s){
+    serverBaseUrl = s.base; sectionKey = s.sectionKey; serverMachineId = s.machineId || null;
+    LS.set('crate_serverUrl', serverBaseUrl); LS.set('crate_sectionKey', sectionKey); LS.set('crate_serverMachineId', serverMachineId);
+    enterCrate();
+  }
+
+  // ---------------- Staying reachable on any network (home wifi or cellular) ----------------
+  // The base URL that worked at setup time might be a local address (192.168.x.x)
+  // that's unreachable away from home. Before loading the shelf, quickly confirm
+  // the cached URL still works; if not, ask plex.tv for a fresh connection list
+  // (this always works from anywhere) and try each candidate — local, remote,
+  // and Plex's relay — until one responds.
+  async function resolveServerBase(){
+    if(serverBaseUrl){
+      try{ await Plex.getSections(serverBaseUrl, token); return serverBaseUrl; }
+      catch(e){ /* cached address unreachable from here — rediscover below */ }
+    }
+    const resources = await Plex.getResources(token);
+    const servers = resources.filter(r => r.provides && r.provides.includes('server'));
+    const server = servers.find(s => s.clientIdentifier === serverMachineId) || servers[0];
+    if(!server) throw new Error('No Plex server found on this account');
+    serverMachineId = server.clientIdentifier;
+    LS.set('crate_serverMachineId', serverMachineId);
+    for(const conn of (server.connections||[])){
+      try{
+        await Plex.getSections(conn.uri, token);
+        serverBaseUrl = conn.uri;
+        LS.set('crate_serverUrl', serverBaseUrl);
+        return serverBaseUrl;
+      }catch(e){ /* try next connection */ }
+    }
+    throw new Error('Could not reach your Plex server on any known connection');
+  }
+
+  // ---------------- Crate rendering ----------------
+  // mainAlbums: the whole library, sorted — always used for "next album alphabetically"
+  // shelfAlbums: whatever is currently browsable (main library, or one artist's albums)
+  // shelfHistory: stack of previous shelves, so "back" can return through nested artist views
+  let mainAlbums = [], shelfAlbums = [], shelfMode = 'main', shelfHistory = [];
+
+  function albumSortFn(a, b){
+    return (a.parentTitle||'').localeCompare(b.parentTitle||'')
+      || ((a.year||0) - (b.year||0))
+      || (a.title||'').localeCompare(b.title||'');
+  }
+
+  function updateShelfButton(){
+    if(shelfMode !== 'artist'){
+      libBtn.textContent = 'change shelf';
+      return;
+    }
+    const prev = shelfHistory[shelfHistory.length - 1];
+    libBtn.textContent = (prev && prev.mode === 'artist') ? "back to artist's shelf" : 'back to main shelf';
+  }
+
+  async function enterCrate(){
+    authEl.style.display = 'none';
+    libBtn.style.display = 'inline-block';
+    crateEl.classList.add('show');
+    crateEl.innerHTML = '<div style="margin:auto" class="spinner"></div>';
+    try{
+      await resolveServerBase();
+      mainAlbums = await Plex.getAlbums(serverBaseUrl, token, sectionKey);
+      mainAlbums.sort(albumSortFn);
+    }catch(e){
+      crateEl.innerHTML = '';
+      crateEmpty.style.display = 'block';
+      crateEmpty.textContent = "Couldn't reach your Plex server from here.";
+      return;
+    }
+    shelfAlbums = mainAlbums;
+    shelfMode = 'main';
+    shelfHistory = [];
+    updateShelfButton();
+    renderSpines();
+  }
+
+  async function showArtistShelf(artistRatingKey){
+    crateEl.innerHTML = '<div style="margin:auto" class="spinner"></div>';
+    try{
+      const artistAlbums = await Plex.getArtistAlbums(serverBaseUrl, token, artistRatingKey);
+      artistAlbums.sort(albumSortFn);
+      shelfHistory.push({ albums: shelfAlbums, mode: shelfMode });
+      shelfAlbums = artistAlbums;
+      shelfMode = 'artist';
+      updateShelfButton();
+    }catch(e){ /* couldn't load — fall back to whatever shelf was already showing */ }
+    renderSpines();
+  }
+
+  const SPINE_CANVAS_W = 110, SPINE_CANVAS_H = 1360; // fixed aspect close to the CSS spine box, stretched to fit
+
+  function renderSpines(){
+    crateEl.innerHTML = '';
+    if(!shelfAlbums.length){ crateEmpty.style.display = 'block'; return; }
+    crateEmpty.style.display = 'none';
+    shelfAlbums.forEach(a => {
+      const el = document.createElement('div');
+      el.className = 'spine';
+      el.innerHTML = `<div class="label">${escapeHtml(a.title)} — ${escapeHtml(a.parentTitle||'')}</div>`;
+      el.addEventListener('click', () => openAlbum(a));
+      el.dataset.ratingKey = a.ratingKey;
+      crateEl.appendChild(el);
+
+      const cover = Plex.img(serverBaseUrl, token, a.thumb, 300);
+      loadImage(cover).then(img => {
+        const colors = samplePalette(img);
+        const dataUrl = drawSpineImage(img, colors, a.title, a.parentTitle || '');
+        el.style.backgroundImage = `url(${dataUrl})`;
+        el.classList.add('art');
+      }).catch(() => { /* CORS or network failure — keep the wood placeholder + text label */ });
+    });
+  }
+
+  function escapeHtml(s){
+    return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function loadImage(url){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = url;
+    });
+  }
+
+  // ---------------- Dominant colour sampling ----------------
+  function samplePalette(img){
+    try{
+      const size = 24;
+      const canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, size, size);
+      const data = ctx.getImageData(0, 0, size, size).data;
+      const buckets = {};
+      for(let i = 0; i < data.length; i += 4){
+        if(data[i+3] < 128) continue;
+        const qr = Math.round(data[i]/32)*32, qg = Math.round(data[i+1]/32)*32, qb = Math.round(data[i+2]/32)*32;
+        const k = qr+','+qg+','+qb;
+        buckets[k] = (buckets[k]||0) + 1;
+      }
+      let sorted = Object.keys(buckets).sort((a,b) => buckets[b]-buckets[a]).map(k => k.split(',').map(Number));
+      const isExtreme = (c) => { const l = (c[0]+c[1]+c[2])/3; return l > 235 || l < 18; };
+      let usable = sorted.filter(c => !isExtreme(c));
+      if(usable.length < 2) usable = sorted.length ? sorted : [[60,42,29],[36,26,18]];
+      const top = usable.slice(0, 3);
+      const toHex = (c) => '#' + c.map(v => Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('');
+      const hexColors = top.map(toHex);
+      while(hexColors.length < 2) hexColors.push(hexColors[0]);
+      return hexColors;
+    }catch(e){
+      return ['#3c2a1d', '#241a12']; // canvas read blocked (CORS) — fall back to the wood tone
+    }
+  }
+
+  function avgLuminance(hexColors){
+    const vals = hexColors.map(hex => {
+      const c = hex.replace('#','');
+      const r = parseInt(c.substr(0,2),16), g = parseInt(c.substr(2,2),16), b = parseInt(c.substr(4,2),16);
+      return 0.299*r + 0.587*g + 0.114*b;
+    });
+    return vals.reduce((a,b)=>a+b,0) / vals.length;
+  }
+
+  function truncateToWidth(ctx, text, maxWidth){
+    if(ctx.measureText(text).width <= maxWidth) return text;
+    let t = text;
+    while(t.length > 1 && ctx.measureText(t + '…').width > maxWidth) t = t.slice(0, -1);
+    return t + '…';
+  }
+
+  // ---------------- Synthetic spine artwork ----------------
+  function drawSpineImage(img, colors, title, artist){
+    const W = SPINE_CANVAS_W, H = SPINE_CANVAS_H;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    // Background: diagonal gradient of the album's dominant tones
+    const grad = ctx.createLinearGradient(0, 0, W, H);
+    if(colors.length >= 3){
+      grad.addColorStop(0, colors[0]); grad.addColorStop(0.55, colors[1]); grad.addColorStop(1, colors[2]);
+    }else{
+      grad.addColorStop(0, colors[0]); grad.addColorStop(1, colors[1]);
+    }
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    const dark = avgLuminance(colors) <= 150;
+    const textColor = dark ? 'rgba(243,234,225,0.94)' : 'rgba(26,18,9,0.92)';
+    const mutedColor = dark ? 'rgba(243,234,225,0.55)' : 'rgba(26,18,9,0.55)';
+    const lineColor = dark ? 'rgba(255,255,255,0.28)' : 'rgba(0,0,0,0.22)';
+
+    // Art swatch, cropped square from the cover, like the small mark at the top of a real spine
+    const pad = Math.round(W * 0.08);
+    const swatchSize = W - pad * 2;
+    const rawW = img.naturalWidth || img.width, rawH = img.naturalHeight || img.height;
+    const side = Math.min(rawW, rawH);
+    const sx = (rawW - side) / 2, sy = (rawH - side) / 2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(pad, pad, swatchSize, swatchSize);
+    ctx.clip();
+    ctx.drawImage(img, sx, sy, side, side, pad, pad, swatchSize, swatchSize);
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(pad, pad, swatchSize, swatchSize);
+
+    // Embossed divider below the swatch
+    const dividerY = pad + swatchSize + Math.round(W * 0.16);
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(pad, dividerY); ctx.lineTo(W - pad, dividerY); ctx.stroke();
+    ctx.strokeStyle = dark ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.35)';
+    ctx.beginPath(); ctx.moveTo(pad, dividerY + 2); ctx.lineTo(W - pad, dividerY + 2); ctx.stroke();
+
+    // Rotated title / artist text running down the spine, leaving room at the
+    // base for the spine to fade into the cover art
+    const coverRevealMinHeight = Math.round(H * 0.22);
+    const textSpace = H - dividerY - Math.round(W * 0.3) - coverRevealMinHeight;
+    const titleSize = Math.round(W * 0.27) + 4, artistSize = Math.round(W * 0.17) + 4;
+
+    ctx.font = `600 ${titleSize}px Fraunces, serif`;
+    const titleTxt = truncateToWidth(ctx, title || '', textSpace * 0.62);
+    const titleWidth = ctx.measureText(titleTxt).width;
+    ctx.font = `500 ${artistSize}px Inter, sans-serif`;
+    const artistTxt = truncateToWidth(ctx, artist || '', textSpace * 0.34);
+    const artistWidth = ctx.measureText(artistTxt).width;
+
+    let cursor = dividerY + Math.round(W * 0.34);
+    ctx.save();
+    ctx.translate(W / 2, cursor);
+    ctx.rotate(Math.PI / 2);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.font = `600 ${titleSize}px Fraunces, serif`;
+    ctx.fillStyle = textColor;
+    ctx.fillText(titleTxt, 0, 0);
+    ctx.restore();
+    cursor += titleWidth + Math.round(W * 0.22);
+
+    ctx.save();
+    ctx.translate(W / 2, cursor);
+    ctx.rotate(Math.PI / 2);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.font = `500 ${artistSize}px Inter, sans-serif`;
+    ctx.fillStyle = mutedColor;
+    ctx.fillText(artistTxt, 0, 0);
+    ctx.restore();
+    cursor += artistWidth + Math.round(W * 0.24);
+
+    // From just past the text, fade the colour gradient into the actual left
+    // edge of the album cover for the rest of the spine.
+    const fadeStartY = Math.min(cursor, H - Math.round(H * 0.12));
+    const blendHeight = Math.round(H * 0.08);
+    const stripSrcW = Math.max(1, Math.round(rawW * 0.16));
+
+    const fadeLayer = document.createElement('canvas');
+    fadeLayer.width = W; fadeLayer.height = H;
+    const fctx = fadeLayer.getContext('2d');
+    fctx.drawImage(img, 0, 0, stripSrcW, rawH, 0, fadeStartY, W, H - fadeStartY);
+    fctx.globalCompositeOperation = 'destination-in';
+    const mask = fctx.createLinearGradient(0, fadeStartY, 0, fadeStartY + blendHeight);
+    mask.addColorStop(0, 'rgba(0,0,0,0)');
+    mask.addColorStop(1, 'rgba(0,0,0,1)');
+    fctx.fillStyle = mask;
+    fctx.fillRect(0, fadeStartY, W, H - fadeStartY);
+    ctx.drawImage(fadeLayer, 0, 0);
+
+    return canvas.toDataURL('image/png');
+  }
+
+  // ---------------- Album overlay (browsing — independent of playback) ----------------
+  let overlayTracks = [], overlayAlbum = null;
+
+  async function openAlbum(album){
+    overlayAlbum = album;
+    ovCover.src = Plex.img(serverBaseUrl, token, album.thumb, 600);
+    ovTitle.textContent = album.title;
+    ovArtist.textContent = album.parentTitle || '';
+    ovYear.textContent = album.year || '';
+    tracklistEl.innerHTML = '<div style="margin:24px auto" class="spinner"></div>';
+    overlay.classList.add('show');
+
+    overlayTracks = await Plex.getTracks(serverBaseUrl, token, album.ratingKey);
+    renderTracklist();
+  }
+
+  function renderTracklist(){
+    tracklistEl.innerHTML = '';
+    const viewingPlayingAlbum = playingAlbumKey && overlayAlbum && String(overlayAlbum.ratingKey) === playingAlbumKey;
+    overlayTracks.forEach((t, i) => {
+      const active = viewingPlayingAlbum && queue[queueIndex] && queue[queueIndex].ratingKey === t.ratingKey;
+      const row = document.createElement('div');
+      row.className = 'track' + (active ? ' active' : '');
+      const mins = Math.floor((t.duration||0)/60000);
+      const secs = Math.floor(((t.duration||0)%60000)/1000).toString().padStart(2,'0');
+      row.innerHTML = `<div class="idx">${active ? '<span class="eq">♪</span>' : (t.index||i+1)}</div>
+                        <div class="t">${escapeHtml(t.title)}</div>
+                        <div class="dur">${mins}:${secs}</div>`;
+      row.addEventListener('click', () => startQueueFromAlbum(overlayAlbum, overlayTracks, i));
+      tracklistEl.appendChild(row);
+    });
+  }
+
+  closeOverlay.addEventListener('click', () => overlay.classList.remove('show'));
+
+  ovArtist.addEventListener('click', () => {
+    if(!overlayAlbum || !overlayAlbum.parentRatingKey) return;
+    overlay.classList.remove('show');
+    const alreadyHere = shelfMode === 'artist' && shelfAlbums.length &&
+      String(shelfAlbums[0].parentRatingKey) === String(overlayAlbum.parentRatingKey);
+    if(alreadyHere) return;
+    showArtistShelf(overlayAlbum.parentRatingKey);
+  });
+
+  ovCover.addEventListener('click', () => {
+    if(!overlayAlbum) return;
+    artViewerImg.src = Plex.img(serverBaseUrl, token, overlayAlbum.thumb, 1000);
+    artViewer.classList.add('show');
+  });
+  artViewer.addEventListener('click', () => artViewer.classList.remove('show'));
+
+  // ---------------- Playback queue ----------------
+  // The queue always belongs to whichever album playback was last started from.
+  // Browsing a different album (openAlbum) never touches it — only tapping a
+  // track (startQueueFromAlbum) does.
+  let queue = [], queueIndex = -1, playingAlbumKey = null;
+
+  function startQueueFromAlbum(album, tracks, index){
+    queue = tracks.map(t => Object.assign({}, t, {
+      _albumRatingKey: album.ratingKey,
+      _albumTitle: album.title,
+      _albumArtist: album.parentTitle,
+      _albumThumb: album.thumb
+    }));
+    queueIndex = index;
+    playingAlbumKey = String(album.ratingKey);
+    loadQueueTrack();
+  }
+
+  function formatCodecBadge(t){
+    const media = t.Media && t.Media[0];
+    if(!media) return '';
+    const codec = (media.audioCodec || '').toUpperCase();
+    const part = media.Part && media.Part[0];
+    const stream = part && part.Stream && part.Stream.find(s => s.streamType === 2);
+    const rateHz = stream && stream.samplingRate ? stream.samplingRate : null;
+    const depth = stream && stream.bitDepth ? stream.bitDepth : null;
+    if(codec && rateHz && depth){
+      const rateKHz = rateHz / 1000;
+      const rateTxt = (Number.isInteger(rateKHz) ? rateKHz : rateKHz.toFixed(1)) + 'kHz';
+      return `${codec} ${depth}-bit ${rateTxt}`;
+    }
+    if(codec && media.bitrate) return `${codec} ${media.bitrate}kbps`;
+    return codec || '';
+  }
+
+  function loadQueueTrack(){
+    const t = queue[queueIndex];
+    if(!t) return;
+    const part = t.Media && t.Media[0] && t.Media[0].Part && t.Media[0].Part[0];
+    if(!part) return;
+    audio.src = Plex.stream(serverBaseUrl, token, part.key);
+    audio.play();
+    mpCover.src = Plex.img(serverBaseUrl, token, t._albumThumb, 100);
+    mpTitle.textContent = t.title;
+    mpArtist.textContent = t._albumArtist || '';
+    const badge = formatCodecBadge(t);
+    mpCodec.textContent = badge;
+    mpCodec.style.display = badge ? 'inline-block' : 'none';
+    mini.classList.add('show');
+    syncMiniSpacing();
+    renderTracklist();
+    document.querySelectorAll('.spine').forEach(s => s.classList.toggle('playing', s.dataset.ratingKey === playingAlbumKey));
+    renderQueuePanel();
+  }
+
+  function getNextAlbum(afterRatingKey){
+    if(!mainAlbums.length) return null;
+    const idx = mainAlbums.findIndex(a => String(a.ratingKey) === String(afterRatingKey));
+    if(idx === -1) return mainAlbums[0];
+    return mainAlbums[(idx+1) % mainAlbums.length];
+  }
+
+  async function advanceQueue(){
+    if(queueIndex < queue.length - 1){
+      queueIndex++;
+      loadQueueTrack();
+      return;
+    }
+    // Album finished — roll into the next album alphabetically.
+    const nextAlbum = getNextAlbum(playingAlbumKey);
+    if(!nextAlbum) return;
+    try{
+      const tracks = await Plex.getTracks(serverBaseUrl, token, nextAlbum.ratingKey);
+      if(tracks.length) startQueueFromAlbum(nextAlbum, tracks, 0);
+    }catch(e){ /* server unreachable — stop quietly */ }
+  }
+
+  mpTapArea.addEventListener('click', () => {
+    if(!playingAlbumKey) return;
+    const album = mainAlbums.find(a => String(a.ratingKey) === playingAlbumKey);
+    if(album) openAlbum(album);
+  });
+
+  mpToggle.addEventListener('click', () => {
+    if(audio.paused){ audio.play(); } else { audio.pause(); }
+  });
+  const ICON_PAUSE = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+  const ICON_PLAY = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+  audio.addEventListener('play', () => mpToggle.innerHTML = ICON_PAUSE);
+  audio.addEventListener('pause', () => mpToggle.innerHTML = ICON_PLAY);
+  audio.addEventListener('timeupdate', () => {
+    if(audio.duration) mpProgress.style.width = (audio.currentTime/audio.duration*100) + '%';
+  });
+  audio.addEventListener('ended', advanceQueue);
+  mpNext.addEventListener('click', advanceQueue);
+  mpPrev.addEventListener('click', () => { if(queueIndex > 0){ queueIndex--; loadQueueTrack(); } });
+
+  // ---------------- Up next panel ----------------
+  function renderQueuePanel(){
+    queueListEl.innerHTML = '';
+    queue.forEach((t, i) => {
+      if(i < queueIndex) return;
+      const row = document.createElement('div');
+      row.className = 'qRow' + (i === queueIndex ? ' active' : '');
+      row.innerHTML = `<div class="qi">${i===queueIndex ? '♪' : (t.index||i+1)}</div>
+                        <div class="qt"><div class="tt">${escapeHtml(t.title)}</div><div class="aa">${escapeHtml(t._albumTitle||'')}</div></div>`;
+      row.addEventListener('click', () => { queueIndex = i; loadQueueTrack(); });
+      queueListEl.appendChild(row);
+    });
+    const next = getNextAlbum(playingAlbumKey);
+    queueNextEl.textContent = next ? `Then plays: ${next.title} — ${next.parentTitle||''}` : '';
+  }
+  queueBtn.addEventListener('click', () => {
+    renderQueuePanel();
+    queuePanel.classList.add('show');
+  });
+  queueClose.addEventListener('click', () => queuePanel.classList.remove('show'));
+
+  // ---------------- Layout: keep the shelf equidistant from header and mini player ----------------
+  function syncMiniSpacing(){
+    const h = mini.classList.contains('show') ? (mini.offsetHeight + 10) : 0;
+    document.documentElement.style.setProperty('--mini-h', h + 'px');
+  }
+  window.addEventListener('resize', syncMiniSpacing);
+
+  // ---------------- Boot ----------------
+  (async function boot(){
+    if(token && serverBaseUrl && sectionKey){
+      try{ await enterCrate(); return; }catch(e){}
+    }
+  })();
+
+})();
+</script>
+</body>
+</html>

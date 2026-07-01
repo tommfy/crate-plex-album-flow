@@ -1,4 +1,4 @@
-# crate.
+# crate. A different way to experience your local Plex music collection.
 
 A browsable "record crate" for your local Plex music library. Scroll through a shelf of generated album spines, tap one to see the cover and tracklist, and play straight through your browser — on your phone, your desktop, or a dedicated kiosk screen.
 
@@ -71,4 +71,6 @@ Everything lives in one file, so most tweaks are a single CSS variable or consta
 
 * **Spine artwork requires CORS-enabled image reads** from your Plex server. If your server/proxy doesn't allow cross-origin pixel reads, spines fall back to a plain color placeholder with a text label instead of the generated artwork — playback and browsing still work fine either way.
 * Data (auth token, server address, library selection) is stored in the browser's `localStorage`, so it's per-browser, not synced across devices.
+
+Note: Created alongside Claude - be aware parts of this project are vibe coded!
 

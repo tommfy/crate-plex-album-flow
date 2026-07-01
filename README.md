@@ -1,4 +1,4 @@
-# crate.
+# crate. A different way to experience your local Plex music collection.
 
 A browsable "record crate" for your local Plex music library. Scroll through a shelf of generated album spines, tap one to see the cover and tracklist, and play straight through your browser — on your phone, your desktop, or a dedicated kiosk screen.
 

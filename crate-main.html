@@ -877,6 +877,33 @@
     renderTracklist();
     document.querySelectorAll('.spine').forEach(s => s.classList.toggle('playing', s.dataset.ratingKey === playingAlbumKey));
     renderQueuePanel();
+    updateMediaSessionMetadata(t);
+  }
+
+  // ---------------- Lock screen / Control Center now-playing info ----------------
+  function updateMediaSessionMetadata(t){
+    if(!('mediaSession' in navigator)) return;
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: t.title || '',
+      artist: t._albumArtist || '',
+      album: t._albumTitle || '',
+      artwork: [
+        { src: Plex.img(serverBaseUrl, token, t._albumThumb, 512), sizes: '512x512', type: 'image/jpeg' }
+      ]
+    });
+  }
+
+  function setupMediaSession(){
+    if(!('mediaSession' in navigator)) return;
+    navigator.mediaSession.setActionHandler('play', () => audio.play());
+    navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+    navigator.mediaSession.setActionHandler('previoustrack', playPrevious);
+    navigator.mediaSession.setActionHandler('nexttrack', () => advanceQueue());
+    try{
+      navigator.mediaSession.setActionHandler('seekto', (details) => {
+        if(details.seekTime != null && audio.duration) audio.currentTime = details.seekTime;
+      });
+    }catch(e){ /* seekto not supported on this browser — fine, other controls still work */ }
   }
 
   function getNextAlbum(afterRatingKey){
@@ -912,14 +939,33 @@
   });
   const ICON_PAUSE = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
   const ICON_PLAY = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
-  audio.addEventListener('play', () => mpToggle.innerHTML = ICON_PAUSE);
-  audio.addEventListener('pause', () => mpToggle.innerHTML = ICON_PLAY);
+  audio.addEventListener('play', () => {
+    mpToggle.innerHTML = ICON_PAUSE;
+    if('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+  });
+  audio.addEventListener('pause', () => {
+    mpToggle.innerHTML = ICON_PLAY;
+    if('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+  });
   audio.addEventListener('timeupdate', () => {
     if(audio.duration) mpProgress.style.width = (audio.currentTime/audio.duration*100) + '%';
+    if('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession && audio.duration){
+      try{
+        navigator.mediaSession.setPositionState({
+          duration: audio.duration,
+          playbackRate: audio.playbackRate,
+          position: audio.currentTime
+        });
+      }catch(e){ /* ignore transient errors, e.g. during a track change */ }
+    }
   });
   audio.addEventListener('ended', advanceQueue);
   mpNext.addEventListener('click', advanceQueue);
-  mpPrev.addEventListener('click', () => { if(queueIndex > 0){ queueIndex--; loadQueueTrack(); } });
+  function playPrevious(){
+    if(queueIndex > 0){ queueIndex--; loadQueueTrack(); }
+  }
+  mpPrev.addEventListener('click', playPrevious);
+  setupMediaSession();
 
   // ---------------- Up next panel ----------------
   function renderQueuePanel(){

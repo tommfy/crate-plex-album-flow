@@ -156,7 +156,7 @@
   #overlay{
     position:fixed; inset:0; background:var(--bg); z-index:40;
     display:none; flex-direction:column;
-    transform:translateY(100%); transition:transform .32s cubic-bezier(.2,.8,.2,1);
+    transform:translateY(100%); transition:transform .32s cubic-bezier(.2,.8,.2,1), background .5s ease;
   }
   #overlay.show{ display:flex; transform:translateY(0); }
   #overlay .top{ display:flex; justify-content:flex-end; padding:calc(14px + env(safe-area-inset-top,0)) 16px 14px; }
@@ -898,9 +898,38 @@
     ovYear.textContent = album.year || '';
     tracklistEl.innerHTML = '<div style="margin:24px auto" class="spinner"></div>';
     overlay.classList.add('show');
+    applyOverlayBackground(album);
 
     overlayTracks = await Plex.getTracks(serverBaseUrl, token, album.ratingKey);
     renderTracklist();
+  }
+
+  function darkenColor(hex, factor){
+    const c = hex.replace('#','');
+    const r = Math.round(parseInt(c.substr(0,2),16) * factor);
+    const g = Math.round(parseInt(c.substr(2,2),16) * factor);
+    const b = Math.round(parseInt(c.substr(4,2),16) * factor);
+    return `rgb(${r},${g},${b})`;
+  }
+
+  const albumBgCache = new Map(); // ratingKey -> gradient CSS, so revisiting an album is instant
+  function applyOverlayBackground(album){
+    overlay.style.background = ''; // fall back to the plain default while loading (or if it fails)
+    const cached = albumBgCache.get(album.ratingKey);
+    if(cached){ overlay.style.background = cached; return; }
+    const cover = Plex.img(serverBaseUrl, token, album.thumb, 200);
+    loadImage(cover).then(img => {
+      const colors = samplePalette(img);
+      const top = darkenColor(colors[0], 0.35);
+      const mid = darkenColor(colors[1] || colors[0], 0.25);
+      const gradient = `linear-gradient(180deg, ${top} 0%, ${mid} 30%, var(--bg) 75%)`;
+      albumBgCache.set(album.ratingKey, gradient);
+      // Only apply if this is still the album actually being viewed (guards
+      // against a quick tap-through to a different album before this resolves)
+      if(overlayAlbum && overlayAlbum.ratingKey === album.ratingKey){
+        overlay.style.background = gradient;
+      }
+    }).catch(() => { /* CORS or network failure — keep the plain background */ });
   }
 
   function renderTracklist(){

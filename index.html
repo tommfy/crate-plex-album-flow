@@ -952,18 +952,7 @@
   function formatCodecBadge(t){
     const media = t.Media && t.Media[0];
     if(!media) return '';
-    const codec = (media.audioCodec || '').toUpperCase();
-    const part = media.Part && media.Part[0];
-    const stream = part && part.Stream && part.Stream.find(s => s.streamType === 2);
-    const rateHz = stream && stream.samplingRate ? stream.samplingRate : null;
-    const depth = stream && stream.bitDepth ? stream.bitDepth : null;
-    if(codec && rateHz && depth){
-      const rateKHz = rateHz / 1000;
-      const rateTxt = (Number.isInteger(rateKHz) ? rateKHz : rateKHz.toFixed(1)) + 'kHz';
-      return `${codec} ${depth}-bit ${rateTxt}`;
-    }
-    if(codec && media.bitrate) return `${codec} ${media.bitrate}kbps`;
-    return codec || '';
+    return (media.audioCodec || '').toUpperCase();
   }
 
   let nowPlayingTrack = null; // track object Plex currently thinks is playing (for timeline reporting)

@@ -343,6 +343,15 @@
     return Object.entries(obj).map(([k,v]) => encodeURIComponent(k)+'='+encodeURIComponent(v)).join('&');
   }
 
+  // Plain fetch() has no built-in timeout — attempting to reach an
+  // unreachable private LAN address (e.g. home IP while on cellular) can hang
+  // far longer than any user should have to wait. This aborts and fails fast.
+  function fetchWithTimeout(url, options, ms){
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms || 4000);
+    return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+  }
+
   let token = LS.get('crate_token') || null;
   let serverBaseUrl = LS.get('crate_serverUrl') || null;
   let serverMachineId = LS.get('crate_serverMachineId') || null;
@@ -385,17 +394,17 @@
       return res.json();
     },
     async getSections(base, tok){
-      const res = await fetch(`${base}/library/sections?X-Plex-Token=${tok}`, { headers:{'Accept':'application/json'} });
+      const res = await fetchWithTimeout(`${base}/library/sections?X-Plex-Token=${tok}`, { headers:{'Accept':'application/json'} }, 4000);
       const j = await res.json();
       return (j.MediaContainer.Directory || []).filter(d => d.type === 'artist');
     },
     async getAlbums(base, tok, key){
-      const res = await fetch(`${base}/library/sections/${key}/albums?X-Plex-Token=${tok}&sort=titleSort`, { headers:{'Accept':'application/json'} });
+      const res = await fetchWithTimeout(`${base}/library/sections/${key}/albums?X-Plex-Token=${tok}&sort=titleSort`, { headers:{'Accept':'application/json'} }, 8000);
       const j = await res.json();
       return j.MediaContainer.Metadata || [];
     },
     async getTracks(base, tok, ratingKey){
-      const res = await fetch(`${base}/library/metadata/${ratingKey}/children?X-Plex-Token=${tok}`, { headers:{'Accept':'application/json'} });
+      const res = await fetchWithTimeout(`${base}/library/metadata/${ratingKey}/children?X-Plex-Token=${tok}`, { headers:{'Accept':'application/json'} }, 8000);
       const j = await res.json();
       return j.MediaContainer.Metadata || [];
     },
@@ -421,7 +430,7 @@
       fetch(`${base}/:/timeline?` + qs(params)).catch(() => {});
     },
     async getArtistAlbums(base, tok, artistRatingKey){
-      const res = await fetch(`${base}/library/metadata/${artistRatingKey}/children?X-Plex-Token=${tok}`, { headers:{'Accept':'application/json'} });
+      const res = await fetchWithTimeout(`${base}/library/metadata/${artistRatingKey}/children?X-Plex-Token=${tok}`, { headers:{'Accept':'application/json'} }, 8000);
       const j = await res.json();
       return j.MediaContainer.Metadata || [];
     },

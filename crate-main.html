@@ -9,8 +9,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Crate">
 <meta name="theme-color" content="#15110e">
-<link rel="apple-touch-icon" href="icon-180.png">
-<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="crate-icon-180.png">
+<link rel="icon" href="crate-icon-192.png">
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,11 +47,32 @@
     letter-spacing:0.02em;
   }
   header h1 span{ color:var(--accent); font-style:italic; font-weight:400; }
+  #headerBtns{ display:flex; align-items:center; gap:6px; }
   #libBtn{
     background:none; border:1px solid var(--muted); color:var(--muted);
     font-family:'JetBrains Mono',monospace; font-size:11px; padding:5px 9px;
-    border-radius:20px; letter-spacing:0.03em;
+    border-radius:20px; letter-spacing:0.03em; white-space:nowrap;
   }
+  #sortBtn{
+    background:none; border:none; color:var(--muted); padding:6px;
+    display:flex; align-items:center; justify-content:center; opacity:0.7;
+  }
+  #sortBtn.active{ color:var(--accent); opacity:1; }
+  .sortWrap{ position:relative; }
+  #sortMenu{
+    position:absolute; top:100%; right:0; margin-top:8px;
+    background:var(--bg-elevated); border-radius:10px; padding:6px; min-width:172px;
+    box-shadow:0 12px 28px rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.07);
+    display:none; z-index:20;
+  }
+  #sortMenu.show{ display:block; }
+  #sortMenu .opt{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:9px 10px; border-radius:7px; font-size:13px; color:var(--cream); cursor:pointer;
+  }
+  #sortMenu .opt:active{ background:rgba(255,255,255,0.06); }
+  #sortMenu .opt .check{ color:var(--accent); opacity:0; font-size:12px; }
+  #sortMenu .opt.active .check{ opacity:1; }
 
   /* ---------- Auth screen ---------- */
   #auth{
@@ -224,7 +245,16 @@
 
   <header>
     <h1>crate<span>.</span></h1>
-    <button id="libBtn" style="display:none">change shelf</button>
+    <div id="headerBtns">
+      <div class="sortWrap">
+        <button id="sortBtn" title="Sort" style="display:none"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M3 6h12v2H3zm0 5h9v2H3zm0 5h6v2H3zm14-9v9.17l-2.59-2.58L13 15l5 5 5-5-1.41-1.41L19 16.17V7z"/></svg></button>
+        <div id="sortMenu">
+          <div class="opt" data-mode="artist">Artist A–Z <span class="check">✓</span></div>
+          <div class="opt" data-mode="recent">Recently added <span class="check">✓</span></div>
+        </div>
+      </div>
+      <button id="libBtn" style="display:none">change shelf</button>
+    </div>
   </header>
 
   <div id="auth">
@@ -300,6 +330,8 @@
     clientId = 'crate-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
     LS.set('crate_clientId', clientId);
   }
+  // Fresh per page load (not persisted) — represents this one continuous playback session
+  const sessionId = 'sess-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
   const PLEX_HEADERS_QS = {
     'X-Plex-Product': 'Crate',
     'X-Plex-Version': '1.0',
@@ -320,7 +352,7 @@
   const $ = (id) => document.getElementById(id);
   const authEl = $('auth'), signInBtn = $('signInBtn'), pinBlock = $('pinBlock'),
         pinCodeEl = $('pinCode'), authStatus = $('authStatus'),
-        crateEl = $('crate'), crateEmpty = $('crateEmpty'), libBtn = $('libBtn'),
+        crateEl = $('crate'), crateEmpty = $('crateEmpty'), libBtn = $('libBtn'), sortBtn = $('sortBtn'), sortMenu = $('sortMenu'),
         libPicker = $('libPicker'), libList = $('libList'), libClose = $('libClose'),
         overlay = $('overlay'), closeOverlay = $('closeOverlay'),
         ovCover = $('ovCover'), ovTitle = $('ovTitle'), ovArtist = $('ovArtist'), ovYear = $('ovYear'),
@@ -366,6 +398,27 @@
       const res = await fetch(`${base}/library/metadata/${ratingKey}/children?X-Plex-Token=${tok}`, { headers:{'Accept':'application/json'} });
       const j = await res.json();
       return j.MediaContainer.Metadata || [];
+    },
+    scrobble(base, tok, ratingKey){
+      // Tells Plex the track was actually played (not just streamed) — this is
+      // what Plex uses to update play counts and relay to connected services
+      // like Last.fm. Fire-and-forget; a failure here shouldn't interrupt playback.
+      fetch(`${base}/:/scrobble?key=${ratingKey}&identifier=com.plexapp.plugins.library&X-Plex-Token=${tok}`).catch(() => {});
+    },
+    reportTimeline(base, tok, { ratingKey, key, state, time, duration }){
+      // The actual session-reporting protocol real Plex clients use — this is
+      // what makes playback show up in Plex Dash's "Now Playing", and Last.fm
+      // scrobbling is tied to this session state, not just the marker above.
+      const params = {
+        ...PLEX_HEADERS_QS,
+        'X-Plex-Session-Identifier': sessionId,
+        identifier: 'com.plexapp.plugins.library',
+        key, ratingKey, state,
+        time: Math.round(time || 0),
+        duration: Math.round(duration || 0),
+        'X-Plex-Token': tok
+      };
+      fetch(`${base}/:/timeline?` + qs(params)).catch(() => {});
     },
     async getArtistAlbums(base, tok, artistRatingKey){
       const res = await fetch(`${base}/library/metadata/${artistRatingKey}/children?X-Plex-Token=${tok}`, { headers:{'Accept':'application/json'} });
@@ -463,9 +516,10 @@
   libBtn.addEventListener('click', async () => {
     if(shelfMode === 'artist'){
       const prev = shelfHistory.pop();
-      shelfAlbums = prev ? prev.albums : mainAlbums;
+      shelfAlbums = prev ? prev.albums : mainShelfSorted();
       shelfMode = prev ? prev.mode : 'main';
       updateShelfButton();
+      updateSortButton();
       renderSpines();
       return;
     }
@@ -523,11 +577,20 @@
   // shelfAlbums: whatever is currently browsable (main library, or one artist's albums)
   // shelfHistory: stack of previous shelves, so "back" can return through nested artist views
   let mainAlbums = [], shelfAlbums = [], shelfMode = 'main', shelfHistory = [];
+  let sortMode = LS.get('crate_sortMode') || 'artist'; // 'artist' | 'recent'
 
   function albumSortFn(a, b){
     return (a.parentTitle||'').localeCompare(b.parentTitle||'')
       || ((a.year||0) - (b.year||0))
       || (a.title||'').localeCompare(b.title||'');
+  }
+  function recentSortFn(a, b){
+    return (b.addedAt||0) - (a.addedAt||0);
+  }
+  // mainAlbums itself always stays artist/year sorted (queue continuation relies
+  // on that stable order); this just produces the view for display.
+  function mainShelfSorted(){
+    return sortMode === 'recent' ? [...mainAlbums].sort(recentSortFn) : mainAlbums;
   }
 
   function updateShelfButton(){
@@ -538,6 +601,36 @@
     const prev = shelfHistory[shelfHistory.length - 1];
     libBtn.textContent = (prev && prev.mode === 'artist') ? "back to artist's shelf" : 'back to main shelf';
   }
+
+  function updateSortButton(){
+    sortBtn.style.display = shelfMode === 'main' ? 'inline-flex' : 'none';
+    sortBtn.classList.toggle('active', sortMode === 'recent');
+    sortBtn.title = sortMode === 'recent' ? 'Sort: Recently added' : 'Sort: Artist A–Z';
+    sortMenu.querySelectorAll('.opt').forEach(el => {
+      el.classList.toggle('active', el.dataset.mode === sortMode);
+    });
+  }
+  sortBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    sortMenu.classList.toggle('show');
+  });
+  sortMenu.querySelectorAll('.opt').forEach(el => {
+    el.addEventListener('click', () => {
+      const mode = el.dataset.mode;
+      sortMenu.classList.remove('show');
+      if(mode === sortMode) return;
+      sortMode = mode;
+      LS.set('crate_sortMode', sortMode);
+      updateSortButton();
+      if(shelfMode === 'main'){
+        shelfAlbums = mainShelfSorted();
+        renderSpines();
+      }
+    });
+  });
+  document.addEventListener('click', (e) => {
+    if(!sortMenu.contains(e.target) && e.target !== sortBtn) sortMenu.classList.remove('show');
+  });
 
   async function enterCrate(){
     authEl.style.display = 'none';
@@ -554,10 +647,11 @@
       crateEmpty.textContent = "Couldn't reach your Plex server from here.";
       return;
     }
-    shelfAlbums = mainAlbums;
+    shelfAlbums = mainShelfSorted();
     shelfMode = 'main';
     shelfHistory = [];
     updateShelfButton();
+    updateSortButton();
     renderSpines();
   }
 
@@ -570,6 +664,7 @@
       shelfAlbums = artistAlbums;
       shelfMode = 'artist';
       updateShelfButton();
+      updateSortButton();
     }catch(e){ /* couldn't load — fall back to whatever shelf was already showing */ }
     renderSpines();
   }
@@ -859,13 +954,30 @@
     return codec || '';
   }
 
+  let nowPlayingTrack = null; // track object Plex currently thinks is playing (for timeline reporting)
+  let lastKnownTimeMs = 0;
+
   function loadQueueTrack(){
     const t = queue[queueIndex];
     if(!t) return;
     const part = t.Media && t.Media[0] && t.Media[0].Part && t.Media[0].Part[0];
     if(!part) return;
+
+    if(nowPlayingTrack){
+      Plex.reportTimeline(serverBaseUrl, token, {
+        ratingKey: nowPlayingTrack.ratingKey, key: nowPlayingTrack.key,
+        state: 'stopped', time: lastKnownTimeMs, duration: nowPlayingTrack.duration || 0
+      });
+    }
+
     audio.src = Plex.stream(serverBaseUrl, token, part.key);
     audio.play();
+    scrobbledCurrentTrack = false;
+    nowPlayingTrack = t;
+    lastKnownTimeMs = 0;
+    Plex.reportTimeline(serverBaseUrl, token, {
+      ratingKey: t.ratingKey, key: t.key, state: 'playing', time: 0, duration: t.duration || 0
+    });
     mpCover.src = Plex.img(serverBaseUrl, token, t._albumThumb, 100);
     mpTitle.textContent = t.title;
     mpArtist.textContent = t._albumArtist || '';
@@ -904,6 +1016,11 @@
         if(details.seekTime != null && audio.duration) audio.currentTime = details.seekTime;
       });
     }catch(e){ /* seekto not supported on this browser — fine, other controls still work */ }
+    // Without this, Safari/macOS synthesizes its own default ±15s skip buttons
+    // in the Now Playing widget instead of showing previoustrack/nexttrack.
+    // Explicitly marking these unsupported lets the real track-skip controls show instead.
+    try{ navigator.mediaSession.setActionHandler('seekbackward', null); }catch(e){}
+    try{ navigator.mediaSession.setActionHandler('seekforward', null); }catch(e){}
   }
 
   function getNextAlbum(afterRatingKey){
@@ -942,12 +1059,38 @@
   audio.addEventListener('play', () => {
     mpToggle.innerHTML = ICON_PAUSE;
     if('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+    if(nowPlayingTrack){
+      Plex.reportTimeline(serverBaseUrl, token, {
+        ratingKey: nowPlayingTrack.ratingKey, key: nowPlayingTrack.key,
+        state: 'playing', time: audio.currentTime * 1000, duration: nowPlayingTrack.duration || 0
+      });
+    }
   });
   audio.addEventListener('pause', () => {
     mpToggle.innerHTML = ICON_PLAY;
     if('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    if(nowPlayingTrack){
+      Plex.reportTimeline(serverBaseUrl, token, {
+        ratingKey: nowPlayingTrack.ratingKey, key: nowPlayingTrack.key,
+        state: 'paused', time: audio.currentTime * 1000, duration: nowPlayingTrack.duration || 0
+      });
+    }
   });
+  // Real Plex clients re-report every ~10s while playing so the server session
+  // doesn't go stale — without this, Dash can drop the "Now Playing" entry
+  // after a short while even though playback is still happening.
+  setInterval(() => {
+    if(nowPlayingTrack && !audio.paused){
+      Plex.reportTimeline(serverBaseUrl, token, {
+        ratingKey: nowPlayingTrack.ratingKey, key: nowPlayingTrack.key,
+        state: 'playing', time: audio.currentTime * 1000, duration: nowPlayingTrack.duration || 0
+      });
+    }
+  }, 10000);
+  let scrobbledCurrentTrack = false;
+
   audio.addEventListener('timeupdate', () => {
+    lastKnownTimeMs = audio.currentTime * 1000;
     if(audio.duration) mpProgress.style.width = (audio.currentTime/audio.duration*100) + '%';
     if('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession && audio.duration){
       try{
@@ -957,6 +1100,14 @@
           position: audio.currentTime
         });
       }catch(e){ /* ignore transient errors, e.g. during a track change */ }
+    }
+    if(!scrobbledCurrentTrack && audio.duration && queue[queueIndex]){
+      const halfway = audio.duration / 2;
+      const fourMinutes = 240;
+      if(audio.currentTime >= Math.min(halfway, fourMinutes)){
+        scrobbledCurrentTrack = true;
+        Plex.scrobble(serverBaseUrl, token, queue[queueIndex].ratingKey);
+      }
     }
   });
   audio.addEventListener('ended', advanceQueue);

@@ -21,7 +21,7 @@ No app, no build step, no backend beyond Plex itself. It's a single self-contain
 ## Requirements
 
 * A Plex Media Server with a music library
-* Plex Pass (if 
+* Plex Pass (if streaming library outside of local network)
 * Any modern browser (Safari, Chrome, Firefox)
 
 ## Getting started

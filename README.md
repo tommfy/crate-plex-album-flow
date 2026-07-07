@@ -10,9 +10,9 @@ No app, no build step, no backend beyond Plex itself. It's a single self-contain
 * **Plex sign-in** — standard Plex PIN-based OAuth flow, no API keys or manual tokens
 * **Scrobbling** — if you have scrobbling via Plex enabled playing songs will scrobble to Last.fm after 4 minutes or 50% progress
 * **Auto-reconnect** — checks whether the last-known server address still works and re-resolves via `plex.tv` if not
-* * **AirPlay Enabled** — you can easily AirPlay your music when using Safari on Apple devices 
+* **AirPlay Enabled** — you can easily AirPlay your music when using Safari on Apple devices 
 * **Artist shelves** — tap an artist's name to filter the shelf to just their albums
-* * **Sorting** — easily sort your albums by album artist A-Z or by most recently added
+* **Sorting** — easily sort your albums by album artist A-Z or by most recently added
 * **Real queue behavior** — browsing to a different album never interrupts what's playing. Tapping a track starts a new queue from that album. When an album finishes, the next one plays automatically — next release by the same artist chronologically, then the next artist alphabetically
 * **Up Next panel** — see what's queued, jump to any upcoming track
 * **Now-playing bar** — cover, title, artist, transport controls, progress, and a codec badge (e.g. `FLAC`)

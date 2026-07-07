@@ -9,16 +9,18 @@ No app, no build step, no backend beyond Plex itself. It's a single self-contain
 * **Spine shelf** — every album renders as a generated "spine": a mix of album covers and colours
 * **Plex sign-in** — standard Plex PIN-based OAuth flow, no API keys or manual tokens
 * **Auto-reconnect** — checks whether the last-known server address still works and re-resolves via `plex.tv` if not
+* * **AirPlay Enabled** — You can easily AirPlay your music when using Safari on Apple devices 
 * **Artist shelves** — tap an artist's name to filter the shelf to just their albums
+* * **Sorting** — Easily sort your albums by album artist A-Z or by most recently added
 * **Real queue behavior** — browsing to a different album never interrupts what's playing. Tapping a track starts a new queue from that album. When an album finishes, the next one plays automatically — next release by the same artist chronologically, then the next artist alphabetically
 * **Up Next panel** — see what's queued, jump to any upcoming track
-* **Now-playing bar** — cover, title, artist, transport controls, progress, and a codec/bitrate badge (e.g. `FLAC 16-bit 44.1kHz`)
+* **Now-playing bar** — cover, title, artist, transport controls, progress, and a codec badge (e.g. `FLAC`)
 * **Tap-to-enlarge cover art**
 
 ## Requirements
 
 * A Plex Media Server with a music library
-* Plex Pass(?)
+* Plex Pass (if 
 * Any modern browser (Safari, Chrome, Firefox)
 
 ## Getting started

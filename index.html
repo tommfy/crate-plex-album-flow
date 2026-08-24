@@ -690,9 +690,8 @@
     LS.set('crate_wallMode', wallMode);
     crateEl.classList.toggle('wall', wallMode);
     updateWallButton();
-    // Spine art is generated to fit the box it's first drawn in — row and wall
-    // spines are different proportions, so regenerate rather than stretch.
-    spineArtCache.clear();
+    // Cache is keyed by view mode too, so this just re-renders the elements —
+    // art for whichever mode you've already seen loads instantly.
     renderSpines();
   });
 
@@ -738,12 +737,53 @@
 
   const SPINE_CANVAS_W = 110, SPINE_CANVAS_H = 1360; // fixed aspect close to the CSS spine box, stretched to fit
 
-  const spineArtCache = new Map(); // ratingKey -> generated spine dataURL, so re-showing a shelf is instant
+  const spineArtCache = new Map(); // "ratingKey|mode" -> generated spine dataURL (in-memory, fast path for this session)
+
+  // Persistent cache so generated spine art survives app restarts, not just
+  // this session. Keyed the same way as the in-memory cache, so row-view and
+  // wall-view art (different box shapes) are cached separately and neither
+  // needs to be regenerated when you switch views or reopen the app. Albums
+  // you haven't seen before (new arrivals on the Plex server) simply aren't
+  // in here yet, so they generate once and get cached from then on.
+  const IDB_NAME = 'crate-art-cache', IDB_STORE = 'spines';
+  let idbPromise = null;
+  function openArtDB(){
+    if(idbPromise) return idbPromise;
+    idbPromise = new Promise((resolve) => {
+      if(!window.indexedDB){ resolve(null); return; }
+      const req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = () => { req.result.createObjectStore(IDB_STORE); };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    });
+    return idbPromise;
+  }
+  async function idbGetArt(key){
+    const db = await openArtDB();
+    if(!db) return null;
+    return new Promise((resolve) => {
+      try{
+        const tx = db.transaction(IDB_STORE, 'readonly');
+        const req = tx.objectStore(IDB_STORE).get(key);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => resolve(null);
+      }catch(e){ resolve(null); }
+    });
+  }
+  async function idbSetArt(key, value){
+    const db = await openArtDB();
+    if(!db) return;
+    try{
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(value, key);
+    }catch(e){ /* quota or private-browsing failure — in-memory cache still works for this session */ }
+  }
 
   function renderSpines(){
     crateEl.innerHTML = '';
     if(!shelfAlbums.length){ crateEmpty.style.display = 'block'; return; }
     crateEmpty.style.display = 'none';
+    const mode = wallMode ? 'wall' : 'row';
     shelfAlbums.forEach(a => {
       const el = document.createElement('div');
       el.className = 'spine';
@@ -752,24 +792,34 @@
       el.dataset.ratingKey = a.ratingKey;
       crateEl.appendChild(el);
 
-      const cached = spineArtCache.get(a.ratingKey);
-      if(cached){
-        el.style.backgroundImage = `url(${cached})`;
+      const cacheKey = a.ratingKey + '|' + mode;
+      const memCached = spineArtCache.get(cacheKey);
+      if(memCached){
+        el.style.backgroundImage = `url(${memCached})`;
         el.classList.add('art');
         return;
       }
 
-      const cover = Plex.img(serverBaseUrl, token, a.thumb, 300);
-      loadImage(cover).then(img => {
-        const colors = samplePalette(img);
-        const rect = el.getBoundingClientRect();
-        const dpr = window.devicePixelRatio || 1;
-        const cw = rect.width  > 0 ? Math.round(rect.width  * dpr) : SPINE_CANVAS_W;
-        const ch = rect.height > 0 ? Math.round(rect.height * dpr) : SPINE_CANVAS_H;
-        const dataUrl = drawSpineImage(img, colors, a.title, a.parentTitle || '', cw, ch);
-        spineArtCache.set(a.ratingKey, dataUrl);
-        el.style.backgroundImage = `url(${dataUrl})`;
-        el.classList.add('art');
+      idbGetArt(cacheKey).then(stored => {
+        if(stored){
+          spineArtCache.set(cacheKey, stored);
+          el.style.backgroundImage = `url(${stored})`;
+          el.classList.add('art');
+          return;
+        }
+        const cover = Plex.img(serverBaseUrl, token, a.thumb, 300);
+        return loadImage(cover).then(img => {
+          const colors = samplePalette(img);
+          const rect = el.getBoundingClientRect();
+          const dpr = window.devicePixelRatio || 1;
+          const cw = rect.width  > 0 ? Math.round(rect.width  * dpr) : SPINE_CANVAS_W;
+          const ch = rect.height > 0 ? Math.round(rect.height * dpr) : SPINE_CANVAS_H;
+          const dataUrl = drawSpineImage(img, colors, a.title, a.parentTitle || '', cw, ch);
+          spineArtCache.set(cacheKey, dataUrl);
+          idbSetArt(cacheKey, dataUrl);
+          el.style.backgroundImage = `url(${dataUrl})`;
+          el.classList.add('art');
+        });
       }).catch(() => { /* CORS or network failure — keep the wood placeholder + text label */ });
     });
   }
@@ -1252,7 +1302,7 @@
     const h = mini.classList.contains('show') ? (mini.offsetHeight + 10) : 0;
     document.documentElement.style.setProperty('--mini-h', h + 'px');
   }
-  window.addEventListener('resize', () => { syncMiniSpacing(); spineArtCache.clear(); });
+  window.addEventListener('resize', () => { syncMiniSpacing(); });
 
   // ---------------- Boot ----------------
   (async function boot(){
